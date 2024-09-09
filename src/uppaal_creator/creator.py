@@ -60,14 +60,19 @@ class UPPAALCreator:
     def rel_pos(self, orig_pos: tuple[int, int], diff: tuple[int, int]):
         return (orig_pos[0] + diff[0], orig_pos[1] + diff[1])
 
-    def convert_graph(
+    def add_global_decls(self, global_decls: str):
+        self.umodel.declaration += global_decls
+
+    def add_template_from_graph(
         self,
         G: nx.DiGraph,
         template_name: str,
         init_node: NodeType,
         node_names: dict[NodeType, str],
+        selects:dict[tuple[NodeType, NodeType], str],
         guards: dict[tuple[NodeType, NodeType], str],
         updates: dict[tuple[NodeType, NodeType], str],
+        declarations: list[str],
     ):
         """ """
         func_template = Template(
@@ -75,7 +80,7 @@ class UPPAALCreator:
             locations=[],
             init_ref=0,
             edges=[],
-            declaration="\n".join([]),
+            declaration=declarations,
         )
         # 创建一个新的空的有向图
         H = nx.DiGraph()
@@ -128,16 +133,14 @@ class UPPAALCreator:
                 else:
                     first_nail, second_nail = get_middle_two(nails[(u, v)])
                     # print(first_nail, second_nail)
-                    return get_position_middle(
-                        first_nail, second_nail
-                    )
+                    return get_position_middle(first_nail, second_nail)
 
         for node_id in G.nodes:
             if node_id == init_node:
                 loc = Location(
                     location_id=node_id,
                     location_pos=layout[node_id],
-                    name=node_names.get(node_id, f"Node{node_id}"),
+                    name=node_names.get(node_id, f""),
                     name_pos=self.rel_pos(layout[node_id], (-10, -20)),
                 )
                 func_template.init_ref = node_id
@@ -145,7 +148,7 @@ class UPPAALCreator:
                 loc = Location(
                     location_id=node_id,
                     location_pos=layout[node_id],
-                    name=node_names.get(node_id, f"Node{node_id}"),
+                    name=node_names.get(node_id, f""),
                     name_pos=self.rel_pos(layout[node_id], (-10, -20)),
                 )
             func_template.locations.append(loc)
@@ -158,10 +161,12 @@ class UPPAALCreator:
                 source_location_pos=layout[u],
                 target_location_id=v,
                 target_location_pos=layout[v],
+                select=selects.get((u, v), ""),
+                select_pos=self.rel_pos(get_edge_midpoint(u, v), (10, -40)),
                 guard=guard,
-                guard_pos=self.rel_pos(get_edge_midpoint(u, v), (10, 20)),
+                guard_pos=self.rel_pos(get_edge_midpoint(u, v), (10, -20)),
                 update=update,
-                update_pos=self.rel_pos(get_edge_midpoint(u, v), (10, -20)),
+                update_pos=self.rel_pos(get_edge_midpoint(u, v), (10, 20)),
                 nails=nails.get((u, v), []),
             )
             func_template.edges.append(e)
