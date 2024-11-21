@@ -69,10 +69,10 @@ class UPPAALCreator:
         template_name: str,
         init_node: NodeType,
         node_names: dict[NodeType, str],
-        selects:dict[tuple[NodeType, NodeType], str],
+        selects: dict[tuple[NodeType, NodeType], str],
         guards: dict[tuple[NodeType, NodeType], str],
         updates: dict[tuple[NodeType, NodeType], str],
-        declarations: list[str],
+        declarations: str,
     ):
         """ """
         func_template = Template(
@@ -82,16 +82,24 @@ class UPPAALCreator:
             edges=[],
             declaration=declarations,
         )
-        # 创建一个新的空的有向图
-        H = nx.DiGraph()
 
-        # 将原始图中的所有节点添加到新图中
-        H.add_nodes_from(G.nodes())
+        # 将节点的标签设置为整数
+        node_names_mapping: dict[NodeType, int] = {n: i for i, n in enumerate(G.nodes())}
+        nx.relabel_nodes(G, node_names_mapping, copy=False)
+        
+        def replace_edge_dict_keys(d: dict[tuple[NodeType, NodeType], str], mapping: dict[NodeType, int]):
+            
+            for edge in list(d.keys()):
+                u, v = edge
+                d[(mapping[u], mapping[v])] = d.pop(edge)
 
-        # 将原始图中的所有边添加到新图中
-        H.add_edges_from(G.edges())
+        replace_edge_dict_keys(guards, node_names_mapping)
+        replace_edge_dict_keys(updates, node_names_mapping)
+        replace_edge_dict_keys(selects, node_names_mapping)
 
         layout, nails = calc_layout(G)
+
+        
 
         def get_position_middle(
             pos1: tuple[int, int], pos2: tuple[int, int]
